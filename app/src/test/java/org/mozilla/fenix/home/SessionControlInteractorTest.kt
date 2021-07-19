@@ -6,22 +6,32 @@ package org.mozilla.fenix.home
 
 import io.mockk.mockk
 import io.mockk.verify
+import mozilla.components.concept.storage.BookmarkNode
+import mozilla.components.concept.storage.BookmarkNodeType
 import mozilla.components.feature.tab.collections.Tab
 import mozilla.components.feature.tab.collections.TabCollection
 import org.junit.Before
 import org.junit.Test
+import org.mozilla.fenix.home.recentbookmarks.controller.RecentBookmarksController
+import org.mozilla.fenix.home.recenttabs.controller.RecentTabController
 import org.mozilla.fenix.home.sessioncontrol.DefaultSessionControlController
 import org.mozilla.fenix.home.sessioncontrol.SessionControlInteractor
 
 class SessionControlInteractorTest {
 
     private val controller: DefaultSessionControlController = mockk(relaxed = true)
+    private val recentTabController: RecentTabController = mockk(relaxed = true)
+    private val recentBookmarksController: RecentBookmarksController = mockk(relaxed = true)
 
     private lateinit var interactor: SessionControlInteractor
 
     @Before
     fun setup() {
-        interactor = SessionControlInteractor(controller)
+        interactor = SessionControlInteractor(
+            controller,
+            recentTabController,
+            recentBookmarksController
+        )
     }
 
     @Test
@@ -127,5 +137,40 @@ class SessionControlInteractorTest {
     fun onTopSiteMenuOpened() {
         interactor.onTopSiteMenuOpened()
         verify { controller.handleMenuOpened() }
+    }
+
+    @Test
+    fun onRecentTabClicked() {
+        val tabId = "tabId"
+        interactor.onRecentTabClicked(tabId)
+        verify { recentTabController.handleRecentTabClicked(tabId) }
+    }
+
+    @Test
+    fun onRecentTabShowAllClicked() {
+        interactor.onRecentTabShowAllClicked()
+        verify { recentTabController.handleRecentTabShowAllClicked() }
+    }
+
+    @Test
+    fun `WHEN a recently saved bookmark is clicked THEN the selected bookmark is handled`() {
+        val bookmark = BookmarkNode(
+            type = BookmarkNodeType.ITEM,
+            guid = "guid#${Math.random() * 1000}",
+            parentGuid = null,
+            position = null,
+            title = null,
+            url = null,
+            children = null
+        )
+
+        interactor.onRecentBookmarkClicked(bookmark)
+        verify { recentBookmarksController.handleBookmarkClicked(bookmark) }
+    }
+
+    @Test
+    fun `WHEN Show All recently saved bookmarks button is clicked THEN the click is handled`() {
+        interactor.onShowAllBookmarksClicked()
+        verify { recentBookmarksController.handleShowAllBookmarksClicked() }
     }
 }

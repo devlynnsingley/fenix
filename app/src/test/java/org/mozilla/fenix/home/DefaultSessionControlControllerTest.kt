@@ -39,7 +39,6 @@ import org.junit.Rule
 import org.junit.Test
 import org.mozilla.fenix.BrowserDirection
 import org.mozilla.fenix.HomeActivity
-import org.mozilla.fenix.helpers.DisableNavGraphProviderAssertionRule
 import org.mozilla.fenix.R
 import org.mozilla.fenix.components.Analytics
 import org.mozilla.fenix.components.TabCollectionStorage
@@ -114,9 +113,6 @@ class DefaultSessionControlControllerTest {
     private lateinit var store: BrowserStore
     private lateinit var controller: DefaultSessionControlController
 
-    @get:Rule
-    val disableNavGraphProviderAssertionRule = DisableNavGraphProviderAssertionRule()
-
     @Before
     fun setup() {
         store = BrowserStore(
@@ -133,7 +129,9 @@ class DefaultSessionControlControllerTest {
             mode = Mode.Normal,
             topSites = emptyList(),
             showCollectionPlaceholder = true,
-            showSetAsDefaultBrowserCard = true
+            showSetAsDefaultBrowserCard = true,
+            recentTabs = emptyList(),
+            recentBookmarks = emptyList()
         )
 
         every { navController.currentDestination } returns mockk {
@@ -145,7 +143,6 @@ class DefaultSessionControlControllerTest {
         every { analytics.metrics } returns metrics
 
         val restoreUseCase: TabsUseCases.RestoreUseCase = mockk(relaxed = true)
-        val requestDesktopSiteUseCase: SessionUseCases.RequestDesktopSiteUseCase = mockk(relaxed = true)
 
         controller = spyk(DefaultSessionControlController(
             activity = activity,
@@ -158,7 +155,6 @@ class DefaultSessionControlControllerTest {
             reloadUrlUseCase = reloadUrlUseCase.reload,
             selectTabUseCase = selectTabUseCase.selectTab,
             restoreUseCase = restoreUseCase,
-            requestDesktopSiteUseCase = requestDesktopSiteUseCase,
             fragmentStore = fragmentStore,
             navController = navController,
             viewLifecycleScope = scope,
@@ -666,7 +662,7 @@ class DefaultSessionControlControllerTest {
 
         verify {
             navController.navigate(
-                match<NavDirections> { it.actionId == R.id.action_global_tabTrayDialogFragment },
+                match<NavDirections> { it.actionId == R.id.action_global_tabsTrayFragment },
                 null
             )
         }

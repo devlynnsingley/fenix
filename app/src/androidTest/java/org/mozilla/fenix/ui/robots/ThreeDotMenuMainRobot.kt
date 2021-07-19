@@ -8,7 +8,6 @@ package org.mozilla.fenix.ui.robots
 
 import androidx.recyclerview.widget.RecyclerView
 import androidx.test.espresso.Espresso.onView
-import androidx.test.espresso.action.ViewActions
 import androidx.test.espresso.action.ViewActions.swipeDown
 import androidx.test.espresso.action.ViewActions.swipeUp
 import androidx.test.espresso.assertion.ViewAssertions.matches
@@ -33,6 +32,7 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.mozilla.fenix.R
 import org.mozilla.fenix.helpers.TestAssetHelper.waitingTime
+import org.mozilla.fenix.helpers.TestHelper.packageName
 import org.mozilla.fenix.helpers.click
 import org.mozilla.fenix.helpers.ext.waitNotNull
 import org.mozilla.fenix.share.ShareFragment
@@ -50,7 +50,6 @@ class ThreeDotMenuMainRobot {
     fun verifyAddOnsButton() = assertAddOnsButton()
     fun verifyHistoryButton() = assertHistoryButton()
     fun verifyBookmarksButton() = assertBookmarksButton()
-    fun verifySyncedTabsButton() = assertSyncedTabsButton()
     fun verifySyncSignInButton() = assertSignInToSyncButton()
     fun verifyHelpButton() = assertHelpButton()
     fun verifyThreeDotMenuExists() = threeDotMenuRecyclerViewExists()
@@ -80,15 +79,6 @@ class ThreeDotMenuMainRobot {
     fun verifySaveCollection() = assertSaveCollectionButton()
     fun verifySelectTabs() = assertSelectTabsButton()
 
-    fun clickSaveCollectionButton() {
-        browserViewSaveCollectionButton().click()
-    }
-
-    fun clickAddNewCollection() {
-        addNewCollectionButton().click()
-    }
-
-    fun verifyCollectionNameTextField() = assertCollectionNameTextField()
     fun verifyFindInPageButton() = assertFindInPageButton()
     fun verifyShareScrim() = assertShareScrim()
     fun verifySendToDeviceTitle() = assertSendToDeviceTitle()
@@ -156,15 +146,6 @@ class ThreeDotMenuMainRobot {
             return DownloadRobot.Transition()
         }
 
-        fun openSyncedTabs(interact: SyncedTabsRobot.() -> Unit): SyncedTabsRobot.Transition {
-            onView(withId(R.id.mozac_browser_menu_recyclerView)).perform(swipeDown())
-            mDevice.waitNotNull(Until.findObject(By.text("Synced tabs")), waitingTime)
-            syncedTabsButton().click()
-
-            SyncedTabsRobot().interact()
-            return SyncedTabsRobot.Transition()
-        }
-
         fun openSyncSignIn(interact: SyncSignInRobot.() -> Unit): SyncSignInRobot.Transition {
             onView(withId(R.id.mozac_browser_menu_recyclerView)).perform(swipeDown())
             mDevice.waitNotNull(Until.findObject(By.text("Sign in to sync")), waitingTime)
@@ -179,7 +160,7 @@ class ThreeDotMenuMainRobot {
             mDevice.waitNotNull(Until.findObject(By.text("Bookmarks")), waitingTime)
 
             bookmarksButton().click()
-            assertTrue(mDevice.findObject(UiSelector().resourceId("org.mozilla.fenix.debug:id/bookmark_list")).waitForExists(waitingTime))
+            assertTrue(mDevice.findObject(UiSelector().resourceId("$packageName:id/bookmark_list")).waitForExists(waitingTime))
 
             BookmarksRobot().interact()
             return BookmarksRobot.Transition()
@@ -203,11 +184,6 @@ class ThreeDotMenuMainRobot {
         }
 
         fun sharePage(interact: LibrarySubMenusMultipleSelectionToolbarRobot.() -> Unit): LibrarySubMenusMultipleSelectionToolbarRobot.Transition {
-            var maxSwipes = 3
-            while (!shareButton().exists() && maxSwipes != 0) {
-                threeDotMenuRecyclerView().perform(swipeUp())
-                maxSwipes--
-            }
             shareButton().click()
             LibrarySubMenusMultipleSelectionToolbarRobot().interact()
             return LibrarySubMenusMultipleSelectionToolbarRobot.Transition()
@@ -222,11 +198,6 @@ class ThreeDotMenuMainRobot {
         }
 
         fun goForward(interact: BrowserRobot.() -> Unit): BrowserRobot.Transition {
-            var maxSwipes = 3
-            while (!forwardButton().exists() && maxSwipes != 0) {
-                threeDotMenuRecyclerView().perform(swipeUp())
-                maxSwipes--
-            }
             forwardButton().click()
 
             BrowserRobot().interact()
@@ -260,11 +231,6 @@ class ThreeDotMenuMainRobot {
         }
 
         fun refreshPage(interact: BrowserRobot.() -> Unit): BrowserRobot.Transition {
-            var maxSwipes = 3
-            while (!refreshButton().exists() && maxSwipes != 0) {
-                threeDotMenuRecyclerView().perform(swipeUp())
-                maxSwipes--
-            }
             assertRefreshButton()
             refreshButton().click()
 
@@ -311,26 +277,6 @@ class ThreeDotMenuMainRobot {
             return BrowserRobot.Transition()
         }
 
-        fun typeCollectionName(
-            name: String,
-            interact: BrowserRobot.() -> Unit
-        ): BrowserRobot.Transition {
-            mDevice.wait(
-                Until.findObject(By.res("org.mozilla.fenix.debug:id/name_collection_edittext")),
-                waitingTime
-            )
-
-            collectionNameTextField().perform(
-                ViewActions.replaceText(name),
-                ViewActions.pressImeActionButton()
-            )
-            // wait for the collection creation wrapper to be dismissed
-            mDevice.waitNotNull(Until.gone(By.res("org.mozilla.fenix.debug:id/createCollectionWrapper")))
-
-            BrowserRobot().interact()
-            return BrowserRobot.Transition()
-        }
-
         fun openReaderViewAppearance(interact: ReaderViewRobot.() -> Unit): ReaderViewRobot.Transition {
             var maxSwipes = 3
             while (!readerViewAppearanceToggle().exists() && maxSwipes != 0) {
@@ -370,19 +316,16 @@ class ThreeDotMenuMainRobot {
             return AddToHomeScreenRobot.Transition()
         }
 
-        fun selectExistingCollection(title: String, interact: BrowserRobot.() -> Unit): BrowserRobot.Transition {
-            mDevice.waitNotNull(Until.findObject(By.text(title)), waitingTime)
-            onView(withText(title)).click()
+        fun openSaveToCollection(interact: CollectionRobot.() -> Unit): CollectionRobot.Transition {
+            // Ensure the menu is expanded and fully scrolled to the bottom.
+            for (i in 0..3) {
+                threeDotMenuRecyclerView().perform(swipeUp())
+            }
 
-            BrowserRobot().interact()
-            return BrowserRobot.Transition()
-        }
-
-        fun openSaveToCollection(interact: ThreeDotMenuMainRobot.() -> Unit): ThreeDotMenuMainRobot.Transition {
             mDevice.waitNotNull(Until.findObject(By.text("Save to collection")), waitingTime)
             saveCollectionButton().click()
-            ThreeDotMenuMainRobot().interact()
-            return ThreeDotMenuMainRobot.Transition()
+            CollectionRobot().interact()
+            return CollectionRobot.Transition()
         }
 
         fun openAddonsManagerMenu(interact: SettingsSubMenuAddonsManagerRobot.() -> Unit): SettingsSubMenuAddonsManagerRobot.Transition {
@@ -393,13 +336,6 @@ class ThreeDotMenuMainRobot {
 
             SettingsSubMenuAddonsManagerRobot().interact()
             return SettingsSubMenuAddonsManagerRobot.Transition()
-        }
-
-        fun exitSaveCollection(interact: BrowserRobot.() -> Unit): BrowserRobot.Transition {
-            exitSaveCollectionButton().click()
-
-            BrowserRobot().interact()
-            return BrowserRobot.Transition()
         }
     }
 }
@@ -425,10 +361,6 @@ private fun assertHistoryButton() = historyButton()
 
 private fun bookmarksButton() = onView(allOf(withText(R.string.library_bookmarks)))
 private fun assertBookmarksButton() = bookmarksButton()
-    .check(matches(withEffectiveVisibility(Visibility.VISIBLE)))
-
-private fun syncedTabsButton() = onView(allOf(withText(R.string.library_synced_tabs)))
-private fun assertSyncedTabsButton() = syncedTabsButton()
     .check(matches(withEffectiveVisibility(Visibility.VISIBLE)))
 
 private fun signInToSyncButton() = onView(withText("Sign in to sync"))
@@ -467,29 +399,12 @@ private fun assertShareTabButton() = shareTabButton()
 private fun shareButton() = mDevice.findObject(UiSelector().description("Share"))
 private fun assertShareButton() = assertTrue(shareButton().waitForExists(waitingTime))
 
-private fun browserViewSaveCollectionButton() = onView(
-    allOf(
-        withText("Save to collection"),
-        withEffectiveVisibility(Visibility.VISIBLE)
-    )
-)
-
 private fun saveCollectionButton() = onView(allOf(withText("Save to collection"))).inRoot(RootMatchers.isPlatformPopup())
 private fun assertSaveCollectionButton() = saveCollectionButton()
     .check(matches(withEffectiveVisibility(Visibility.VISIBLE)))
 
 private fun selectTabsButton() = onView(allOf(withText("Select tabs"))).inRoot(RootMatchers.isPlatformPopup())
 private fun assertSelectTabsButton() = selectTabsButton()
-    .check(matches(withEffectiveVisibility(Visibility.VISIBLE)))
-
-private fun addNewCollectionButton() = onView(allOf(withText("Add new collection")))
-private fun assertaddNewCollectionButton() = addNewCollectionButton()
-    .check(matches(withEffectiveVisibility(Visibility.VISIBLE)))
-
-private fun collectionNameTextField() =
-    onView(allOf(withResourceName("name_collection_edittext")))
-
-private fun assertCollectionNameTextField() = collectionNameTextField()
     .check(matches(withEffectiveVisibility(Visibility.VISIBLE)))
 
 private fun reportSiteIssueButton() = onView(withText("Report Site Issue…"))
@@ -590,8 +505,6 @@ private fun clickAddonsManagerButton() {
     onView(withId(R.id.mozac_browser_menu_menuView)).perform(swipeDown())
     addOnsButton().check(matches(isCompletelyDisplayed())).click()
 }
-
-private fun exitSaveCollectionButton() = onView(withId(R.id.back_button)).check(matches(isDisplayed()))
 
 private fun tabSettingsButton() =
     onView(allOf(withText("Tab settings"))).inRoot(RootMatchers.isPlatformPopup())
